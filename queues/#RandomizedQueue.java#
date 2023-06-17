@@ -1,0 +1,267 @@
+/* *****************************************************************************
+ *  Name:    Ricky Lin
+ *  NetID:   rickyl
+ *  Precept: P09
+ *
+ *  Description:  Creates a RandomizedQueue with a self-sizing array as the
+ *                underlying data structure. It enqueues to the end of the
+ *                array and dequeues from the front. It keeps track of the
+ *                beginning and end of the array. When the array is full,
+ *                the queue will shuffle itself and resize to twice the size.
+ *                When it's 1/4 full, it will cut itself down in half. The
+ *                iterator goes over every index of the array and returns
+ *                the object there.
+ *
+ *  Written:       9/23/2019
+ *  Last updated:  9/23/2019
+ *
+ *  % javac-algs4 RandomizedQueue.java
+ *  % java-algs4 RandomizedQueue.java
+ *
+ **************************************************************************** */
+
+import edu.princeton.cs.algs4.StdOut;
+import edu.princeton.cs.algs4.StdRandom;
+
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+
+public class RandomizedQueue<Item> implements Iterable<Item> {
+
+    // underlying array containing elements
+    private Item[] arr;
+
+    // set index of head and tail to 0
+    private int head, tail = 0;
+
+    // tracks size
+    private int num = 0;
+
+    // construct an empty randomized queue
+    public RandomizedQueue() {
+
+        // start with 1 slot for array
+        arr = (Item[]) new Object[1];
+    }
+
+    // is the randomized queue empty?
+    public boolean isEmpty() {
+        return num == 0;
+    }
+
+    // return the number of items on the randomized queue
+    public int size() {
+        return num;
+    }
+
+    // algo to resize array when needed
+    private void resize(int capacity) {
+
+        Item[] copy = (Item[]) new Object[capacity];
+
+        for (int i = 0; i < size(); i++) { // copy values over
+            copy[i] = arr[(head + i) % arr.length];
+        }
+
+        head = 0;                          // set new head & tail
+        tail = size();
+        arr = copy;
+    }
+
+    // prevents null arguments
+    private void noNull(Item item) {
+        if (item == null) {
+            throw new IllegalArgumentException();
+        }
+    }
+
+    // add the item
+    public void enqueue(Item item) {
+
+        noNull(item);
+
+        if (tail == arr.length) {      // if max size, double length
+            resize(2 * arr.length);
+        }
+
+        arr[tail++] = item;              // add item and move tail
+
+//        if (tail == arr.length) {
+//            tail = 0;                    // wraps around to front
+//        }
+
+        num++;
+    }
+
+    // check if you're removing from empty queue
+    private void bounds() {
+        if (isEmpty()) {
+            throw new NoSuchElementException();
+        }
+    }
+
+    // remove and return a random item
+    public Item dequeue() {
+
+        // check boundaries
+        bounds();
+
+        // create random within head to tail
+
+        int rand = StdRandom.uniform(tail - head) + head;
+
+        // swap random index to the front and remove it
+        Item temp = arr[rand];
+        arr[rand] = arr[head];
+        arr[head] = null;
+
+        // Item item = arr[head];
+        // arr[head] = null;
+
+        num--;
+
+        // move head pointer down
+        head++;
+
+//        // wrap around
+//        if (size() == 0) {
+//            tail = 0;
+//        }
+
+        // resize down if 1/4 full
+        if (num > 0 && num == arr.length / 4) {
+            resize(arr.length / 2);
+        }
+
+        return temp;
+    }
+
+    // return a random item (but do not remove it)
+    public Item sample() {
+
+        bounds();
+
+        int rand = StdRandom.uniform(tail - head) + head;
+        return arr[rand];
+    }
+
+    private class RQueueIterator implements Iterator<Item> {
+
+        // keeps track of curr index
+        private int count = 0;
+
+        // create new queue of non-nulls
+        private final Item[] queue = (Item[]) new Object[num];
+
+        // constructor that fills array with
+        public RQueueIterator() {
+
+            // ctr for queue index
+            int ctr = 0;
+
+            // ctr for arr index
+            int i = 0;
+
+            if (head == 0) {
+                i = head;
+            } else {
+                i = head - 1;
+            }
+
+            while (i < tail) {
+                if (arr[i] != null) {
+                    queue[ctr] = arr[i];
+                    ctr++;
+                }
+                i++;
+            }
+            StdRandom.shuffle(queue);
+        }
+
+        public boolean hasNext() {
+            return count < size();
+        }
+
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
+
+        public Item next() {
+            if (!hasNext()) {
+                throw new NoSuchElementException();
+            }
+            Item item = queue[count];
+            count++;
+            return item;
+        }
+
+    }
+
+    // return an independent iterator over items in random order
+    public Iterator<Item> iterator() {
+        return new RQueueIterator();
+    }
+
+    // unit testing (required)
+    public static void main(String[] args) {
+        RandomizedQueue<String> rqueue = new RandomizedQueue<String>();
+
+        StdOut.println("----- Testing Empty & Count -----");
+        StdOut.println(rqueue.isEmpty()); // expect true
+        StdOut.println(rqueue.size());    // expect 0
+        // StdOut.println(rqueue.sample());  // exceptions
+        // StdOut.println(rqueue.enqueue(null))
+
+        rqueue.enqueue("Hello");
+
+        StdOut.println(rqueue.dequeue());  // testing empty to non-empty
+        rqueue.enqueue("Hello");
+
+        rqueue.enqueue("My");
+        StdOut.println(rqueue.head);
+        StdOut.println(rqueue.tail);
+        StdOut.println(rqueue.dequeue());
+        StdOut.println(rqueue.head);
+        StdOut.println(rqueue.tail);
+
+        rqueue.enqueue("Name");
+        rqueue.enqueue("Is");
+
+        StdOut.println(rqueue.dequeue());
+        rqueue.enqueue("Bob");
+        rqueue.enqueue("Junior");
+
+        rqueue.enqueue("Hello");
+        rqueue.enqueue("My");
+        StdOut.println(rqueue.dequeue());
+        rqueue.enqueue("My");
+        rqueue.enqueue("Name");
+        rqueue.enqueue("Is");
+        StdOut.println(rqueue.dequeue());
+        rqueue.enqueue("Bob");
+        rqueue.enqueue("Bob");
+        rqueue.enqueue("Junior");
+
+        StdOut.println("----- Testing Empty & Count -----");
+        StdOut.println(rqueue.isEmpty()); // expect false
+        StdOut.println(rqueue.size());    // expect 10
+        StdOut.println(rqueue.sample());  // random #
+
+        Iterator<String> i = rqueue.iterator();
+
+        while (i.hasNext()) {
+            String s = i.next();
+            StdOut.println(s);
+        }
+
+        StdOut.println(rqueue.dequeue());
+        StdOut.println(rqueue.dequeue());
+        StdOut.println(rqueue.dequeue());
+        StdOut.println(rqueue.dequeue());
+        StdOut.println(rqueue.dequeue());
+        StdOut.println(rqueue.dequeue());
+        // StdOut.println(rqueue.dequeue());  exception
+
+    }
+
+}
